@@ -27,7 +27,7 @@ var sftpCmd = &cobra.Command{
 
 // uploadCmd 表示上传文件命令
 var rzCmd = &cobra.Command{
-	Use:   "upload [alias|host] [local_path] [remote_path]",
+	Use:   "rz [alias|host] [local_path] [remote_path]",
 	Short: "Upload files to remote server",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
@@ -88,7 +88,7 @@ var rzCmd = &cobra.Command{
 
 // downloadCmd 表示下载文件命令
 var szCmd = &cobra.Command{
-	Use:   "download [alias|host] [remote_path] [local_path]",
+	Use:   "sz [alias|host] [remote_path] [local_path]",
 	Short: "Download files from remote server",
 	Args:  cobra.MinimumNArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
