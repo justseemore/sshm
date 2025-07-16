@@ -75,6 +75,8 @@ var connectCmd = &cobra.Command{
 			username = cred.Username
 		} else if connectUser != "" {
 			username = connectUser
+		} else {
+			username = "root"
 		}
 
 		// 验证是否有可用的用户名

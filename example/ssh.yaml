@@ -17,7 +17,7 @@ credentials:
   prod-key:
     type: key
     username: admin
-    key_path: ~/.ssh/prod_rsa
+    key_path: ~/.ssh/adbusiness.pem
 
   dev-account:
     type: password

@@ -24,14 +24,14 @@ var listCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		_, _ = fmt.Fprintln(w, "ALIAS\tHOST\tPORT\tUSER\tPROXY")
+		_, _ = fmt.Fprintln(w, "ALIAS\tHOST\tPORT\tPROXY")
 		for alias, conn := range cfg.Connections {
 			proxyInfo := "none"
 			if conn.ProxyType != "" && conn.ProxyType != "none" {
 				proxyInfo = fmt.Sprintf("%s://%s:%d", conn.ProxyType, conn.ProxyHost, conn.ProxyPort)
 			}
 			// 修改输出行
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\t%s\n", alias, conn.Host, conn.Port, conn.User, proxyInfo, conn.DefaultCredential)
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", alias, conn.Host, conn.Port, proxyInfo)
 		}
 		return w.Flush()
 	},

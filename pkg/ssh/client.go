@@ -42,6 +42,7 @@ func ConnectWithCredential(conn *config.Connection, cred *config.Credential) err
 		if cred.Type == "key" {
 			// 添加私钥认证
 			expandedPath := os.ExpandEnv(cred.KeyPath)
+			fmt.Println(expandedPath)
 			key, err := os.ReadFile(expandedPath)
 			if err != nil {
 				return fmt.Errorf("unable to read private key: %w", err)
