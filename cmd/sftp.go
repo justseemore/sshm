@@ -26,7 +26,7 @@ var sftpCmd = &cobra.Command{
 }
 
 // uploadCmd 表示上传文件命令
-var uploadCmd = &cobra.Command{
+var rzCmd = &cobra.Command{
 	Use:   "upload [alias|host] [local_path] [remote_path]",
 	Short: "Upload files to remote server",
 	Args:  cobra.MinimumNArgs(1),
@@ -87,7 +87,7 @@ var uploadCmd = &cobra.Command{
 }
 
 // downloadCmd 表示下载文件命令
-var downloadCmd = &cobra.Command{
+var szCmd = &cobra.Command{
 	Use:   "download [alias|host] [remote_path] [local_path]",
 	Short: "Download files from remote server",
 	Args:  cobra.MinimumNArgs(1),
@@ -343,12 +343,12 @@ func resolveConnectionAndCredential(target string) (*config.Connection, *config.
 
 func init() {
 	rootCmd.AddCommand(sftpCmd)
-	sftpCmd.AddCommand(uploadCmd)
-	sftpCmd.AddCommand(downloadCmd)
+	sftpCmd.AddCommand(rzCmd)
+	sftpCmd.AddCommand(szCmd)
 	sftpCmd.AddCommand(lsCmd)
 
 	// 将凭证、用户名和端口标志添加到SFTP命令
-	for _, cmd := range []*cobra.Command{uploadCmd, downloadCmd, lsCmd} {
+	for _, cmd := range []*cobra.Command{rzCmd, szCmd, lsCmd} {
 		cmd.Flags().StringVarP(&credentialAlias, "credential", "c", "",
 			"Use specific credential alias for connection")
 		cmd.Flags().IntVarP(&connectPort, "port", "p", 0,
@@ -358,7 +358,7 @@ func init() {
 	}
 
 	// 添加SFTP特定标志
-	for _, cmd := range []*cobra.Command{uploadCmd, downloadCmd} {
+	for _, cmd := range []*cobra.Command{rzCmd, szCmd} {
 		cmd.Flags().StringVarP(&sftpLocalPath, "local", "l", "",
 			"Local file or directory path")
 		cmd.Flags().StringVarP(&sftpRemotePath, "remote", "r", "",
