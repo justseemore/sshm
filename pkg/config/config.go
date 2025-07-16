@@ -16,6 +16,13 @@ type Connection struct {
 	Password     string `yaml:"password,omitempty"`
 	IdentityFile string `yaml:"identity_file,omitempty"`
 	Timeout      string `yaml:"timeout,omitempty"`
+
+	// 新增代理配置字段
+	ProxyType     string `yaml:"proxy_type,omitempty"` // 支持 "http", "socks5", "none"
+	ProxyHost     string `yaml:"proxy_host,omitempty"`
+	ProxyPort     int    `yaml:"proxy_port,omitempty"`
+	ProxyUser     string `yaml:"proxy_user,omitempty"`
+	ProxyPassword string `yaml:"proxy_password,omitempty"`
 }
 
 // Config represents the structure of the config file

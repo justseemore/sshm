@@ -16,6 +16,13 @@ var (
 	password     string
 	identityFile string
 	timeout      string
+
+	// 新增代理相关变量
+	proxyType     string
+	proxyHost     string
+	proxyPort     int
+	proxyUser     string
+	proxyPassword string
 )
 
 var addCmd = &cobra.Command{
@@ -34,7 +41,7 @@ var addCmd = &cobra.Command{
 			return fmt.Errorf("connection with alias '%s' already exists", alias)
 		}
 
-		// Expand identity file path
+		// 展开身份文件路径
 		if identityFile != "" {
 			if identityFile[0] == '~' {
 				homeDir, err := os.UserHomeDir()
@@ -45,7 +52,7 @@ var addCmd = &cobra.Command{
 			}
 		}
 
-		// Create new connection
+		// 创建新连接配置
 		cfg.Connections[alias] = config.Connection{
 			Host:         host,
 			Port:         port,
@@ -53,9 +60,16 @@ var addCmd = &cobra.Command{
 			Password:     password,
 			IdentityFile: identityFile,
 			Timeout:      timeout,
+
+			// 添加代理配置
+			ProxyType:     proxyType,
+			ProxyHost:     proxyHost,
+			ProxyPort:     proxyPort,
+			ProxyUser:     proxyUser,
+			ProxyPassword: proxyPassword,
 		}
 
-		// Save config
+		// 保存配置
 		if err := config.SaveConfig(cfg); err != nil {
 			return fmt.Errorf("error saving config: %w", err)
 		}
@@ -66,12 +80,20 @@ var addCmd = &cobra.Command{
 }
 
 func init() {
+	// 现有选项
 	addCmd.Flags().StringVarP(&host, "host", "H", "", "Host address (required)")
 	addCmd.Flags().IntVarP(&port, "port", "p", 22, "Port number")
 	addCmd.Flags().StringVarP(&user, "user", "u", "", "Username (required)")
 	addCmd.Flags().StringVarP(&password, "password", "P", "", "Password (not recommended, use identity file instead)")
 	addCmd.Flags().StringVarP(&identityFile, "identity-file", "i", "", "Identity file path")
 	addCmd.Flags().StringVarP(&timeout, "timeout", "t", "10s", "Connection timeout")
+
+	// 添加代理相关选项
+	addCmd.Flags().StringVar(&proxyType, "proxy-type", "", "Proxy type (http, socks5, none)")
+	addCmd.Flags().StringVar(&proxyHost, "proxy-host", "", "Proxy host")
+	addCmd.Flags().IntVar(&proxyPort, "proxy-port", 0, "Proxy port")
+	addCmd.Flags().StringVar(&proxyUser, "proxy-user", "", "Proxy username")
+	addCmd.Flags().StringVar(&proxyPassword, "proxy-password", "", "Proxy password")
 
 	addCmd.MarkFlagRequired("host")
 	addCmd.MarkFlagRequired("user")

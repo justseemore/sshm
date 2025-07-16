@@ -1,7 +1,11 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
+	"net"
+	"net/http"
+	"net/url"
 	"os"
 	"os/signal"
 	"syscall"
@@ -10,23 +14,24 @@ import (
 	"github.com/justseemore/sshm/pkg/config"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/terminal"
+	"golang.org/x/net/proxy"
 )
 
 // Connect connects to an SSH server using the given configuration
 func Connect(conn *config.Connection) error {
-	// Create SSH client config
+	// 创建SSH客户端配置
 	clientConfig := &ssh.ClientConfig{
 		User:            conn.User,
 		Auth:            []ssh.AuthMethod{},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // Note: In production, use ssh.FixedHostKey or ssh.VerifyHostKeyDNS
+		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 注意：生产环境应使用更安全的方法
 	}
 
-	// Add password auth if provided
+	// 添加密码认证（如果提供）
 	if conn.Password != "" {
 		clientConfig.Auth = append(clientConfig.Auth, ssh.Password(conn.Password))
 	}
 
-	// Add identity file auth if provided
+	// 添加私钥认证（如果提供）
 	if conn.IdentityFile != "" {
 		expandedPath := os.ExpandEnv(conn.IdentityFile)
 		key, err := os.ReadFile(expandedPath)
@@ -42,31 +47,110 @@ func Connect(conn *config.Connection) error {
 		clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
 	}
 
-	// Set timeout if specified
+	// 设置超时（如果指定）
 	if conn.Timeout != "" {
 		timeout, err := time.ParseDuration(conn.Timeout)
 		if err != nil {
 			return fmt.Errorf("invalid timeout value: %w", err)
 		}
 		clientConfig.Timeout = timeout
+	} else {
+		clientConfig.Timeout = 10 * time.Second // 默认超时
 	}
 
-	// Connect to SSH server
+	var client *ssh.Client
+	var err error
 	addr := fmt.Sprintf("%s:%d", conn.Host, conn.Port)
-	client, err := ssh.Dial("tcp", addr, clientConfig)
-	if err != nil {
-		return fmt.Errorf("unable to connect to SSH server: %w", err)
+
+	// 使用代理或直接连接
+	if conn.ProxyType != "" && conn.ProxyType != "none" {
+		switch conn.ProxyType {
+		case "http":
+			// HTTP代理连接
+			proxyURL := &url.URL{
+				Scheme: "http",
+				Host:   fmt.Sprintf("%s:%d", conn.ProxyHost, conn.ProxyPort),
+			}
+
+			if conn.ProxyUser != "" {
+				proxyURL.User = url.UserPassword(conn.ProxyUser, conn.ProxyPassword)
+			}
+
+			httpClient := &http.Client{
+				Transport: &http.Transport{
+					Proxy: http.ProxyURL(proxyURL),
+					DialContext: (&net.Dialer{
+						Timeout:   clientConfig.Timeout,
+						KeepAlive: 30 * time.Second,
+					}).DialContext,
+				},
+			}
+
+			// 使用HTTP代理拨号
+			dialer := httpClient.Transport.(*http.Transport).DialContext
+			netConn, err := dialer(context.Background(), "tcp", addr)
+			if err != nil {
+				return fmt.Errorf("unable to connect through HTTP proxy: %w", err)
+			}
+
+			// 使用建立的连接创建SSH客户端
+			conn, chans, reqs, err := ssh.NewClientConn(netConn, addr, clientConfig)
+			if err != nil {
+				netConn.Close()
+				return fmt.Errorf("unable to create SSH client connection: %w", err)
+			}
+			client = ssh.NewClient(conn, chans, reqs)
+
+		case "socks5":
+			// SOCKS5代理连接
+			proxyAddr := fmt.Sprintf("%s:%d", conn.ProxyHost, conn.ProxyPort)
+			var auth *proxy.Auth
+
+			if conn.ProxyUser != "" {
+				auth = &proxy.Auth{
+					User:     conn.ProxyUser,
+					Password: conn.ProxyPassword,
+				}
+			}
+
+			dialer, err := proxy.SOCKS5("tcp", proxyAddr, auth, proxy.Direct)
+			if err != nil {
+				return fmt.Errorf("unable to create SOCKS5 proxy dialer: %w", err)
+			}
+
+			netConn, err := dialer.Dial("tcp", addr)
+			if err != nil {
+				return fmt.Errorf("unable to connect through SOCKS5 proxy: %w", err)
+			}
+
+			// 使用建立的连接创建SSH客户端
+			conn, chans, reqs, err := ssh.NewClientConn(netConn, addr, clientConfig)
+			if err != nil {
+				netConn.Close()
+				return fmt.Errorf("unable to create SSH client connection: %w", err)
+			}
+			client = ssh.NewClient(conn, chans, reqs)
+
+		default:
+			return fmt.Errorf("unsupported proxy type: %s", conn.ProxyType)
+		}
+	} else {
+		// 直接连接（不使用代理）
+		client, err = ssh.Dial("tcp", addr, clientConfig)
+		if err != nil {
+			return fmt.Errorf("unable to connect to SSH server: %w", err)
+		}
 	}
 	defer client.Close()
 
-	// Create SSH session
+	// 创建SSH会话
 	session, err := client.NewSession()
 	if err != nil {
 		return fmt.Errorf("unable to create SSH session: %w", err)
 	}
 	defer session.Close()
 
-	// Set up terminal
+	// 设置终端
 	fd := int(os.Stdin.Fd())
 	oldState, err := terminal.MakeRaw(fd)
 	if err != nil {
@@ -74,30 +158,27 @@ func Connect(conn *config.Connection) error {
 	}
 	defer terminal.Restore(fd, oldState)
 
-	// Set up IO
+	// 设置IO
 	session.Stdout = os.Stdout
 	session.Stderr = os.Stderr
 	session.Stdin = os.Stdin
 
-	// Get terminal dimensions
+	// 获取终端尺寸
 	width, height, err := terminal.GetSize(fd)
 	if err != nil {
 		return fmt.Errorf("unable to get terminal size: %w", err)
 	}
 
-	// Set up terminal modes
-	modes := ssh.TerminalModes{
+	// 请求伪终端
+	if err := session.RequestPty("xterm-256color", height, width, ssh.TerminalModes{
 		ssh.ECHO:          1,
 		ssh.TTY_OP_ISPEED: 14400,
 		ssh.TTY_OP_OSPEED: 14400,
-	}
-
-	// Request pseudo-terminal
-	if err := session.RequestPty("xterm-256color", height, width, modes); err != nil {
+	}); err != nil {
 		return fmt.Errorf("request for pseudo terminal failed: %w", err)
 	}
 
-	// Handle window resize
+	// 处理窗口大小变化
 	sigwinchCh := make(chan os.Signal, 1)
 	signal.Notify(sigwinchCh, syscall.SIGWINCH)
 	go func() {
@@ -114,12 +195,12 @@ func Connect(conn *config.Connection) error {
 		close(sigwinchCh)
 	}()
 
-	// Start shell
+	// 启动shell
 	if err := session.Shell(); err != nil {
 		return fmt.Errorf("failed to start shell: %w", err)
 	}
 
-	// Wait for session to finish
+	// 等待会话结束
 	if err := session.Wait(); err != nil {
 		if e, ok := err.(*ssh.ExitError); ok {
 			return fmt.Errorf("command exited with code %d", e.ExitStatus())
