@@ -24,9 +24,9 @@ var listCmd = &cobra.Command{
 		}
 
 		w := tabwriter.NewWriter(os.Stdout, 0, 0, 2, ' ', 0)
-		fmt.Fprintln(w, "ALIAS\tHOST\tPORT\tUSER")
+		_, _ = fmt.Fprintln(w, "ALIAS\tHOST\tPORT\tUSER")
 		for alias, conn := range cfg.Connections {
-			fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", alias, conn.Host, conn.Port, conn.User)
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", alias, conn.Host, conn.Port, conn.User)
 		}
 		return w.Flush()
 	},
