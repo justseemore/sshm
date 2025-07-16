@@ -18,9 +18,10 @@ var (
 )
 
 var connectCmd = &cobra.Command{
-	Use:   "connect [alias|host]",
-	Short: "Connect to a server using an alias or directly via IP/hostname",
-	Args:  cobra.ExactArgs(1),
+	Use:     "connect [alias|host]",
+	Aliases: []string{"login", "l"},
+	Short:   "Connect to a server using an alias or directly via IP/hostname",
+	Args:    cobra.ExactArgs(1),
 	RunE: func(cmd *cobra.Command, args []string) error {
 		target := args[0]
 
