@@ -17,37 +17,75 @@ import (
 	"golang.org/x/net/proxy"
 )
 
-// Connect connects to an SSH server using the given configuration
+// 保留原有的Connect函数
 func Connect(conn *config.Connection) error {
+	return ConnectWithCredential(conn, nil)
+}
+
+// Connect connects to an SSH server using the given configuration
+func ConnectWithCredential(conn *config.Connection, cred *config.Credential) error {
 	// 创建SSH客户端配置
 	clientConfig := &ssh.ClientConfig{
-		User:            conn.User,
+		User:            conn.User, // 默认使用连接配置中的用户名
 		Auth:            []ssh.AuthMethod{},
 		HostKeyCallback: ssh.InsecureIgnoreHostKey(), // 注意：生产环境应使用更安全的方法
 	}
 
-	// 添加密码认证（如果提供）
-	if conn.Password != "" {
-		clientConfig.Auth = append(clientConfig.Auth, ssh.Password(conn.Password))
-	}
-
-	// 添加私钥认证（如果提供）
-	if conn.IdentityFile != "" {
-		expandedPath := os.ExpandEnv(conn.IdentityFile)
-		key, err := os.ReadFile(expandedPath)
-		if err != nil {
-			return fmt.Errorf("unable to read private key: %w", err)
+	// 使用凭证中的认证信息（如果提供）
+	if cred != nil {
+		// 使用凭证中的用户名（如果有）
+		if cred.Username != "" {
+			clientConfig.User = cred.Username
 		}
 
-		signer, err := ssh.ParsePrivateKey(key)
-		if err != nil {
-			return fmt.Errorf("unable to parse private key: %w", err)
+		// 根据凭证类型添加认证方法
+		if cred.Type == "key" {
+			// 添加私钥认证
+			expandedPath := os.ExpandEnv(cred.KeyPath)
+			key, err := os.ReadFile(expandedPath)
+			if err != nil {
+				return fmt.Errorf("unable to read private key: %w", err)
+			}
+
+			var signer ssh.Signer
+			if cred.KeyPassword != "" {
+				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(cred.KeyPassword))
+			} else {
+				signer, err = ssh.ParsePrivateKey(key)
+			}
+
+			if err != nil {
+				return fmt.Errorf("unable to parse private key: %w", err)
+			}
+
+			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
+		} else if cred.Type == "password" {
+			// 添加密码认证
+			clientConfig.Auth = append(clientConfig.Auth, ssh.Password(cred.Password))
+		}
+	} else {
+		// 使用连接配置中的认证信息
+		if conn.Password != "" {
+			clientConfig.Auth = append(clientConfig.Auth, ssh.Password(conn.Password))
 		}
 
-		clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
+		if conn.IdentityFile != "" {
+			expandedPath := os.ExpandEnv(conn.IdentityFile)
+			key, err := os.ReadFile(expandedPath)
+			if err != nil {
+				return fmt.Errorf("unable to read private key: %w", err)
+			}
+
+			signer, err := ssh.ParsePrivateKey(key)
+			if err != nil {
+				return fmt.Errorf("unable to parse private key: %w", err)
+			}
+
+			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
+		}
 	}
 
-	// 设置超时（如果指定）
+	// 设置超时
 	if conn.Timeout != "" {
 		timeout, err := time.ParseDuration(conn.Timeout)
 		if err != nil {

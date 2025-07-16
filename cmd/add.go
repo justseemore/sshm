@@ -23,6 +23,8 @@ var (
 	proxyPort     int
 	proxyUser     string
 	proxyPassword string
+
+	defaultCredential string
 )
 
 var addCmd = &cobra.Command{
@@ -52,6 +54,12 @@ var addCmd = &cobra.Command{
 			}
 		}
 
+		// 在RunE函数中添加验证代码
+		if defaultCredential != "" {
+			if _, exists := cfg.Credentials[defaultCredential]; !exists {
+				return fmt.Errorf("default credential '%s' not found", defaultCredential)
+			}
+		}
 		// 创建新连接配置
 		cfg.Connections[alias] = config.Connection{
 			Host:         host,
@@ -67,6 +75,8 @@ var addCmd = &cobra.Command{
 			ProxyPort:     proxyPort,
 			ProxyUser:     proxyUser,
 			ProxyPassword: proxyPassword,
+
+			DefaultCredential: defaultCredential,
 		}
 
 		// 保存配置
@@ -87,6 +97,9 @@ func init() {
 	addCmd.Flags().StringVarP(&password, "password", "P", "", "Password (not recommended, use identity file instead)")
 	addCmd.Flags().StringVarP(&identityFile, "identity-file", "i", "", "Identity file path")
 	addCmd.Flags().StringVarP(&timeout, "timeout", "t", "10s", "Connection timeout")
+	// 添加默认凭证选项
+	addCmd.Flags().StringVar(&defaultCredential, "default-credential", "",
+		"Default credential to use for this connection")
 
 	// 添加代理相关选项
 	addCmd.Flags().StringVar(&proxyType, "proxy-type", "", "Proxy type (http, socks5, none)")

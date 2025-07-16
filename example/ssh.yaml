@@ -2,27 +2,30 @@ connections:
   prod-server:
     host: 192.168.1.100
     port: 22
-    user: admin
-    password: adminpass
     timeout: 10s
-    proxy_type: none
+    default_credential: prod-key
 
   dev-server:
     host: dev.example.com
     port: 2222
-    user: developer
-    identity_file: ~/.ssh/dev_key
     proxy_type: socks5
     proxy_host: 127.0.0.1
     proxy_port: 1080
+    default_credential: dev-account
 
-  cloud-server:
-    host: cloud.example.org
-    port: 22
-    user: cloud-admin
-    identity_file: ~/.ssh/cloud_key
-    proxy_type: http
-    proxy_host: proxy.company.com
-    proxy_port: 8080
-    proxy_user: proxyuser
-    proxy_password: proxypass
+credentials:
+  prod-key:
+    type: key
+    username: admin
+    key_path: ~/.ssh/prod_rsa
+
+  dev-account:
+    type: password
+    username: developer
+    password: dev-password
+
+  cloud-key:
+    type: key
+    username: cloud-admin
+    key_path: ~/.ssh/cloud_key
+    key_password: passphrase

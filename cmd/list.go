@@ -30,7 +30,8 @@ var listCmd = &cobra.Command{
 			if conn.ProxyType != "" && conn.ProxyType != "none" {
 				proxyInfo = fmt.Sprintf("%s://%s:%d", conn.ProxyType, conn.ProxyHost, conn.ProxyPort)
 			}
-			_, _ = fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\n", alias, conn.Host, conn.Port, conn.User, proxyInfo)
+			// 修改输出行
+			_, _ = fmt.Fprintf(w, "%s\t%s\t%d\t%s\t%s\t%s\n", alias, conn.Host, conn.Port, conn.User, proxyInfo, conn.DefaultCredential)
 		}
 		return w.Flush()
 	},
