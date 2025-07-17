@@ -8,6 +8,7 @@ import (
 	"time"
 
 	"github.com/justseemore/sshm/pkg/config"
+	ssh_pool "github.com/justseemore/sshm/pkg/ssh"
 	"github.com/pkg/sftp"
 	"github.com/schollz/progressbar/v3"
 	"golang.org/x/crypto/ssh"
@@ -22,7 +23,7 @@ type SftpClient struct {
 // NewSftpClient 创建新的SFTP客户端
 func NewSftpClient(conn *config.Connection, cred *config.Credential) (*SftpClient, error) {
 	// 从连接池获取或创建SSH客户端
-	pool := ssh.GetConnectionPool()
+	pool := ssh_pool.GetConnectionPool()
 	client, err := pool.GetClient(conn, cred)
 	if err != nil {
 		return nil, fmt.Errorf("unable to establish SSH connection: %w", err)

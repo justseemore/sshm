@@ -1,7 +1,13 @@
 package ssh
 
 import (
+	"context"
 	"fmt"
+	"golang.org/x/net/proxy"
+	"net"
+	"net/http"
+	"net/url"
+	"os"
 	"sync"
 	"time"
 
