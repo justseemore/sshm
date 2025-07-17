@@ -21,90 +21,21 @@ type SftpClient struct {
 
 // NewSftpClient 创建新的SFTP客户端
 func NewSftpClient(conn *config.Connection, cred *config.Credential) (*SftpClient, error) {
-	// 创建SSH客户端配置
-	clientConfig := &ssh.ClientConfig{
-		User:            conn.User,
-		Auth:            []ssh.AuthMethod{},
-		HostKeyCallback: ssh.InsecureIgnoreHostKey(),
-	}
-
-	// 使用凭证配置身份验证
-	if cred != nil {
-		if cred.Username != "" {
-			clientConfig.User = cred.Username
-		}
-
-		if cred.Type == "key" {
-			expandedPath := os.ExpandEnv(cred.KeyPath)
-			key, err := os.ReadFile(expandedPath)
-			if err != nil {
-				return nil, fmt.Errorf("unable to read private key: %w", err)
-			}
-
-			var signer ssh.Signer
-			if cred.KeyPassword != "" {
-				signer, err = ssh.ParsePrivateKeyWithPassphrase(key, []byte(cred.KeyPassword))
-			} else {
-				signer, err = ssh.ParsePrivateKey(key)
-			}
-
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse private key: %w", err)
-			}
-
-			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
-		} else if cred.Type == "password" {
-			clientConfig.Auth = append(clientConfig.Auth, ssh.Password(cred.Password))
-		}
-	} else {
-		// 使用连接配置
-		if conn.Password != "" {
-			clientConfig.Auth = append(clientConfig.Auth, ssh.Password(conn.Password))
-		}
-
-		if conn.IdentityFile != "" {
-			expandedPath := os.ExpandEnv(conn.IdentityFile)
-			key, err := os.ReadFile(expandedPath)
-			if err != nil {
-				return nil, fmt.Errorf("unable to read private key: %w", err)
-			}
-
-			signer, err := ssh.ParsePrivateKey(key)
-			if err != nil {
-				return nil, fmt.Errorf("unable to parse private key: %w", err)
-			}
-
-			clientConfig.Auth = append(clientConfig.Auth, ssh.PublicKeys(signer))
-		}
-	}
-
-	// 设置超时
-	if conn.Timeout != "" {
-		timeout, err := time.ParseDuration(conn.Timeout)
-		if err != nil {
-			return nil, fmt.Errorf("invalid timeout value: %w", err)
-		}
-		clientConfig.Timeout = timeout
-	} else {
-		clientConfig.Timeout = 10 * time.Second
-	}
-
-	// 连接到SSH服务器
-	addr := fmt.Sprintf("%s:%d", conn.Host, conn.Port)
-	sshClient, err := ssh.Dial("tcp", addr, clientConfig)
+	// 从连接池获取或创建SSH客户端
+	pool := ssh.GetConnectionPool()
+	client, err := pool.GetClient(conn, cred)
 	if err != nil {
-		return nil, fmt.Errorf("unable to connect to SSH server: %w", err)
+		return nil, fmt.Errorf("unable to establish SSH connection: %w", err)
 	}
 
 	// 创建SFTP客户端
-	sftpClient, err := sftp.NewClient(sshClient)
+	sftpClient, err := sftp.NewClient(client)
 	if err != nil {
-		sshClient.Close()
 		return nil, fmt.Errorf("unable to create SFTP client: %w", err)
 	}
 
 	return &SftpClient{
-		sshClient:  sshClient,
+		sshClient:  client,
 		sftpClient: sftpClient,
 	}, nil
 }
