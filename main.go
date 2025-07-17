@@ -15,7 +15,8 @@ func main() {
 		if errors.As(err, &exitErr) && exitErr.ExitCode() == 130 {
 			// 静默退出或自定义处理
 			os.Exit(0)
+		} else {
+			fmt.Println(err.Error())
 		}
-		fmt.Println(err.Error())
 	}
 }
