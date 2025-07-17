@@ -100,6 +100,14 @@ func (p *ConnectionPool) keepAlive(client *ssh.Client, key string) {
 	ticker := time.NewTicker(30 * time.Second)
 	defer ticker.Stop()
 
+	// 添加一个检测客户端是否已关闭的通道
+	closed := make(chan struct{})
+	go func() {
+		// 这个goroutine会在客户端关闭时退出
+		_, _, _ = client.SendRequest("keepalive@openssh.com", true, nil)
+		close(closed)
+	}()
+
 	for {
 		select {
 		case <-ticker.C:
@@ -126,6 +134,13 @@ func (p *ConnectionPool) keepAlive(client *ssh.Client, key string) {
 			p.mutex.Lock()
 			p.lastUsed[key] = time.Now()
 			p.mutex.Unlock()
+		case <-closed:
+			// 客户端已关闭，从池中移除
+			p.mutex.Lock()
+			delete(p.connections, key)
+			delete(p.lastUsed, key)
+			p.mutex.Unlock()
+			return
 		}
 	}
 }

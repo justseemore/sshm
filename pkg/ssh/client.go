@@ -85,7 +85,17 @@ func ConnectWithCredential(conn *config.Connection, cred *config.Credential) err
 	// 等待会话结束
 	if err := session.Wait(); err != nil {
 		if e, ok := err.(*ssh.ExitError); ok {
-			return fmt.Errorf("command exited with code %d", e.ExitStatus())
+			// 忽略特定的退出错误码
+			switch e.ExitStatus() {
+			case 127:
+				// 错误码127通常是由logout命令引起的
+				return nil
+			case 130:
+				// 错误码130通常是由Ctrl+C中断引起的
+				return nil
+			default:
+				return fmt.Errorf("command exited with code %d", e.ExitStatus())
+			}
 		}
 		return fmt.Errorf("session ended with error: %w", err)
 	}
