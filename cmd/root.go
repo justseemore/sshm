@@ -9,7 +9,6 @@ var rootCmd = &cobra.Command{
 	Short: "SSH Manager - manage your SSH connections",
 	Long: `SSH Manager (sshm) is a simple tool to manage your SSH connections.
 It allows you to store your SSH connection details in a YAML file and connect to them using aliases.`,
-	SilenceUsage: true,
 }
 
 // Execute adds all child commands to the root command and sets flags appropriately.
