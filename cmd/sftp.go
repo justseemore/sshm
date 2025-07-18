@@ -48,7 +48,7 @@ var rzCmd = &cobra.Command{
 			remotePath = args[2]
 		}
 		if remotePath == "" {
-			// 如果未指定远程路径，使用本地文件名
+			// 如果未指定远程路径，使用本地文件或目录名
 			remotePath = filepath.Base(localPath)
 		}
 
@@ -109,7 +109,7 @@ var szCmd = &cobra.Command{
 			localPath = args[2]
 		}
 		if localPath == "" {
-			// 如果未指定本地路径，使用远程文件名
+			// 如果未指定本地路径，使用远程文件或目录名
 			localPath = filepath.Base(remotePath)
 		}
 
