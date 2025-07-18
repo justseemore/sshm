@@ -296,8 +296,7 @@ func resolveConnectionAndCredential(target string) (*config.Connection, *config.
 			Port: port,
 			User: connectUser,
 		}
-
-		fmt.Println("Direct connection mode - using IP/hostname without saved configuration")
+		// fmt.Println("Direct connection mode - using IP/hostname without saved configuration")
 	} else {
 		// 从配置加载连接别名
 		conn, err = config.GetConnection(target)
