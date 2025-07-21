@@ -17,12 +17,8 @@ var (
 	identityFile string
 	timeout      string
 
-	// 新增代理相关变量
-	proxyType     string
-	proxyHost     string
-	proxyPort     int
-	proxyUser     string
-	proxyPassword string
+	// 单行代理配置
+	proxy string
 
 	defaultCredential string
 )
@@ -69,12 +65,8 @@ var addCmd = &cobra.Command{
 			IdentityFile: identityFile,
 			Timeout:      timeout,
 
-			// 添加代理配置
-			ProxyType:     proxyType,
-			ProxyHost:     proxyHost,
-			ProxyPort:     proxyPort,
-			ProxyUser:     proxyUser,
-			ProxyPassword: proxyPassword,
+			// 使用新的单行代理配置
+			Proxy:             proxy,
 
 			DefaultCredential: defaultCredential,
 		}
@@ -101,12 +93,8 @@ func init() {
 	addCmd.Flags().StringVar(&defaultCredential, "default-credential", "",
 		"Default credential to use for this connection")
 
-	// 添加代理相关选项
-	addCmd.Flags().StringVar(&proxyType, "proxy-type", "", "Proxy type (http, socks5, none)")
-	addCmd.Flags().StringVar(&proxyHost, "proxy-host", "", "Proxy host")
-	addCmd.Flags().IntVar(&proxyPort, "proxy-port", 0, "Proxy port")
-	addCmd.Flags().StringVar(&proxyUser, "proxy-user", "", "Proxy username")
-	addCmd.Flags().StringVar(&proxyPassword, "proxy-password", "", "Proxy password")
+	// 添加单行代理配置选项
+	addCmd.Flags().StringVar(&proxy, "proxy", "", "Proxy configuration in URI format (http://[user:pass@]host:")
 
 	addCmd.MarkFlagRequired("host")
 	addCmd.MarkFlagRequired("user")

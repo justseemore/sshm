@@ -18,7 +18,7 @@ type Connection struct {
 	Timeout      string `yaml:"timeout,omitempty"`
 
 	// 单行代理配置，格式："http://user:pass@host:port" 或 "socks5://host:port"
-	Proxy            string `yaml:"proxy,omitempty"`
+	Proxy string `yaml:"proxy,omitempty"`
 	
 	// 默认使用的凭证别名
 	DefaultCredential string `yaml:"default_credential,omitempty"`

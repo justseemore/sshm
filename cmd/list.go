@@ -27,8 +27,8 @@ var listCmd = &cobra.Command{
 		_, _ = fmt.Fprintln(w, "ALIAS\tHOST\tPORT\tPROXY")
 		for alias, conn := range cfg.Connections {
 			proxyInfo := "none"
-			if conn.ProxyType != "" && conn.ProxyType != "none" {
-				proxyInfo = fmt.Sprintf("%s://%s:%d", conn.ProxyType, conn.ProxyHost, conn.ProxyPort)
+			if conn.Proxy != "" {
+				proxyInfo = conn.Proxy
 			}
 			// 修改输出行
 			_, _ = fmt.Fprintf(w, "%s\t%s\t%d\t%s\n", alias, conn.Host, conn.Port, proxyInfo)
