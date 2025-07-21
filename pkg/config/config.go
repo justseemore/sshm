@@ -17,12 +17,9 @@ type Connection struct {
 	IdentityFile string `yaml:"identity_file,omitempty"`
 	Timeout      string `yaml:"timeout,omitempty"`
 
-	// 新增代理配置字段
-	ProxyType     string `yaml:"proxy_type,omitempty"` // 支持 "http", "socks5", "none"
-	ProxyHost     string `yaml:"proxy_host,omitempty"`
-	ProxyPort     int    `yaml:"proxy_port,omitempty"`
-	ProxyUser     string `yaml:"proxy_user,omitempty"`
-	ProxyPassword string `yaml:"proxy_password,omitempty"`
+	// 单行代理配置，格式："http://user:pass@host:port" 或 "socks5://host:port"
+	Proxy            string `yaml:"proxy,omitempty"`
+	
 	// 默认使用的凭证别名
 	DefaultCredential string `yaml:"default_credential,omitempty"`
 }
