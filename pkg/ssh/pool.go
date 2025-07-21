@@ -249,36 +249,56 @@ func createSSHClient(conn *config.Connection, cred *config.Credential) (*ssh.Cli
 	addr := fmt.Sprintf("%s:%d", conn.Host, conn.Port)
 
 	// 使用代理或直接连接
-	if conn.ProxyType != "" && conn.ProxyType != "none" {
-		switch conn.ProxyType {
+	if conn.Proxy != "" {
+		// 解析代理URL
+		proxyURL, err := url.Parse(conn.Proxy)
+		if err != nil {
+			return nil, fmt.Errorf("unable to parse proxy URL: %w", err)
+		}
+		
+		proxyType := proxyURL.Scheme
+		proxyHost := proxyURL.Hostname()
+		proxyPort, err := strconv.Atoi(proxyURL.Port())
+		if err != nil {
+			return nil, fmt.Errorf("invalid proxy port: %w", err)
+		}
+		
+		proxyUser := ""
+		proxyPassword := ""
+		if proxyURL.User != nil {
+			proxyUser = proxyURL.User.Username()
+			proxyPassword, _ = proxyURL.User.Password()
+		}
+		
+		switch proxyType {
 		case "http":
 			// HTTP代理连接
-			proxyURL := &url.URL{
+			httpProxyURL := &url.URL{
 				Scheme: "http",
-				Host:   fmt.Sprintf("%s:%d", conn.ProxyHost, conn.ProxyPort),
+				Host:   fmt.Sprintf("%s:%d", proxyHost, proxyPort),
 			}
-
-			if conn.ProxyUser != "" {
-				proxyURL.User = url.UserPassword(conn.ProxyUser, conn.ProxyPassword)
+			
+			if proxyUser != "" {
+				httpProxyURL.User = url.UserPassword(proxyUser, proxyPassword)
 			}
-
+			
 			httpClient := &http.Client{
 				Transport: &http.Transport{
-					Proxy: http.ProxyURL(proxyURL),
+					Proxy: http.ProxyURL(httpProxyURL),
 					DialContext: (&net.Dialer{
 						Timeout:   clientConfig.Timeout,
 						KeepAlive: 30 * time.Second,
 					}).DialContext,
 				},
 			}
-
+			
 			// 使用HTTP代理拨号
 			dialer := httpClient.Transport.(*http.Transport).DialContext
 			netConn, err := dialer(context.Background(), "tcp", addr)
 			if err != nil {
 				return nil, fmt.Errorf("unable to connect through HTTP proxy: %w", err)
 			}
-
+			
 			// 使用建立的连接创建SSH客户端
 			conn, chans, reqs, err := ssh.NewClientConn(netConn, addr, clientConfig)
 			if err != nil {
@@ -286,29 +306,29 @@ func createSSHClient(conn *config.Connection, cred *config.Credential) (*ssh.Cli
 				return nil, fmt.Errorf("unable to create SSH client connection: %w", err)
 			}
 			client = ssh.NewClient(conn, chans, reqs)
-
+			
 		case "socks5":
 			// SOCKS5代理连接
-			proxyAddr := fmt.Sprintf("%s:%d", conn.ProxyHost, conn.ProxyPort)
+			proxyAddr := fmt.Sprintf("%s:%d", proxyHost, proxyPort)
 			var auth *proxy.Auth
-
-			if conn.ProxyUser != "" {
+			
+			if proxyUser != "" {
 				auth = &proxy.Auth{
-					User:     conn.ProxyUser,
-					Password: conn.ProxyPassword,
+					User:     proxyUser,
+					Password: proxyPassword,
 				}
 			}
-
+			
 			dialer, err := proxy.SOCKS5("tcp", proxyAddr, auth, proxy.Direct)
 			if err != nil {
 				return nil, fmt.Errorf("unable to create SOCKS5 proxy dialer: %w", err)
 			}
-
+			
 			netConn, err := dialer.Dial("tcp", addr)
 			if err != nil {
 				return nil, fmt.Errorf("unable to connect through SOCKS5 proxy: %w", err)
 			}
-
+			
 			// 使用建立的连接创建SSH客户端
 			conn, chans, reqs, err := ssh.NewClientConn(netConn, addr, clientConfig)
 			if err != nil {
@@ -316,9 +336,9 @@ func createSSHClient(conn *config.Connection, cred *config.Credential) (*ssh.Cli
 				return nil, fmt.Errorf("unable to create SSH client connection: %w", err)
 			}
 			client = ssh.NewClient(conn, chans, reqs)
-
+			
 		default:
-			return nil, fmt.Errorf("unsupported proxy type: %s", conn.ProxyType)
+			return nil, fmt.Errorf("unsupported proxy type: %s", proxyType)
 		}
 	} else {
 		// 直接连接（不使用代理）

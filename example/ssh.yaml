@@ -8,10 +8,14 @@ connections:
   dev-server:
     host: dev.example.com
     port: 2222
-    proxy_type: socks5
-    proxy_host: 127.0.0.1
-    proxy_port: 1080
+    proxy: socks5://127.0.0.1:1080
     default_credential: dev-account
+    
+  staging-server:
+    host: staging.example.com
+    port: 22
+    proxy: http://proxy-user:proxy-pass@proxy.example.com:8080
+    default_credential: cloud-key
 
 credentials:
   prod-key:

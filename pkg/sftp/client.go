@@ -44,10 +44,7 @@ func NewSftpClient(conn *config.Connection, cred *config.Credential) (*SftpClien
 // Close 关闭SFTP和SSH连接
 func (c *SftpClient) Close() error {
 	if c.sftpClient != nil {
-		c.sftpClient.Close()
-	}
-	if c.sshClient != nil {
-		c.sshClient.Close()
+		return c.sftpClient.Close()
 	}
 	return nil
 }
