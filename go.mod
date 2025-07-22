@@ -1,6 +1,6 @@
 module github.com/justseemore/sshm
 
-go 1.23.10
+go 1.24.5
 
 require (
 	github.com/pkg/sftp v1.13.9
